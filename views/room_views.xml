@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_room_tree" model="ir.ui.view">
+        <field name="name">formation.room.tree</field>
+        <field name="model">formation.room</field>
+        <field name="arch" type="xml">
+            <tree string="Salles" decoration-danger="state == 'maintenance'" decoration-success="state == 'available'">
+                <field name="name"/>
+                <field name="location"/>
+                <field name="capacity"/>
+                <field name="state" widget="badge" 
+                       decoration-danger="state == 'maintenance'" 
+                       decoration-success="state == 'available'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_room_form" model="ir.ui.view">
+        <field name="name">formation.room.form</field>
+        <field name="model">formation.room</field>
+        <field name="arch" type="xml">
+            <form string="Salle">
+                <header>
+                    <field name="state" widget="statusbar" options="{'clickable': '1'}"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1><field name="name" placeholder="Ex: Salle 101"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="location"/>
+                        </group>
+                        <group>
+                            <field name="capacity"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Planning des Seances" name="seances">
+                            <field name="seance_ids" readonly="1">
+                                <tree>
+                                    <field name="date_day"/>
+                                    <field name="start_hour"/>
+                                    <field name="end_hour"/>
+
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_formation_room" model="ir.actions.act_window">
+        <field name="name">Salles</field>
+        <field name="res_model">formation.room</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+
+</odoo>
+

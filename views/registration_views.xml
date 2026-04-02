@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_formation_registration_tree" model="ir.ui.view">
+        <field name="name">formation.registration.tree</field>
+        <field name="model">formation.registration</field>
+        <field name="arch" type="xml">
+            <tree decoration-info="status == 'registered'" 
+                  decoration-success="status == 'completed'" 
+                  decoration-danger="status == 'cancelled'">
+                <field name="partner_id"/>
+                <field name="session_id"/>
+                <field name="submission_date"/>
+                <field name="status" widget="badge" 
+                       decoration-info="status == 'registered'" 
+                       decoration-success="status == 'completed'" 
+                       decoration-danger="status == 'cancelled'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_formation_registration_form" model="ir.ui.view">
+        <field name="name">formation.registration.form</field>
+        <field name="model">formation.registration</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="status" widget="statusbar" statusbar_visible="registered,completed,cancelled"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Informations Générales" name="main_info">
+                            <field name="partner_id"/>
+                            <field name="session_id"/>
+                        </group>
+                        <group string="Projet &amp; Évaluation">
+                            <field name="project_theme"/>
+                            <field name="project_link" widget="url"/>
+                            <field name="submission_date"/>
+                            <field name="evaluation"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_formation_registration_form_inherit" model="ir.ui.view">
+        <field name="name">formation.registration.form.inherit</field>
+        <field name="model">formation.registration</field>
+        <field name="inherit_id" ref="view_formation_registration_form"/>
+        <field name="arch" type="xml">
+            
+            <xpath expr="//form/sheet" position="before">
+                <div class="alert alert-warning text-center" role="alert" 
+                     style="margin-bottom:0px;"
+                     invisible="not proposed_cancellation">
+                    <strong>Alerte Absences :</strong> Cet étudiant dépasse la limite autorisée (5 absences). 
+                    <button name="action_confirm_cancellation" string="Confirmer l'annulation" 
+                            type="object" class="btn-danger ml-2"/>
+                </div>
+            </xpath>
+            
+            <xpath expr="//group[@name='main_info']" position="inside">
+                <field name="absence_count" decoration-danger="absence_count > 5"/>
+                <field name="proposed_cancellation" invisible="1"/>
+            </xpath>
+
+            <xpath expr="//sheet" position="after">
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+    <record id="action_formation_registration" model="ir.actions.act_window">
+        <field name="name">Inscriptions</field>
+        <field name="res_model">formation.registration</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Inscrivez un nouvel étudiant à une session.
+            </p>
+        </field>
+    </record>
+
+</odoo>

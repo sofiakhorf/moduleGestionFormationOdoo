@@ -1,2 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_formation_course,access.formation.course,model_formation_course,base.group_user,1,1,1,1
+access_formation_course,formation.course.access,model_formation_course,base.group_user,1,1,1,1
+access_formation_seance,formation.seance.access,model_formation_seance,base.group_user,1,1,1,1
+access_formation_session,formation.session.access,model_formation_session,base.group_user,1,1,1,1
+access_formation_room,formation.room.access,model_formation_room,base.group_user,1,1,1,1
+access_formation_registration,formation.registration.access,model_formation_registration,base.group_user,1,1,1,1
+access_formation_attendance,formation.attendance.access,model_formation_attendance,base.group_user,1,1,1,1

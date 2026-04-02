@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_room_analysis_graph" model="ir.ui.view">
+        <field name="name">formation.room.analysis.graph</field>
+        <field name="model">formation.room</field>
+        <field name="arch" type="xml">
+            <graph string="Utilisation des Salles" type="bar">
+                <field name="name"/>
+                <field name="id" type="measure" string="Nombre de Séances"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_room_reporting" model="ir.actions.act_window">
+        <field name="name">Analyse des Salles</field>
+        <field name="res_model">formation.room</field>
+        <field name="view_mode">graph,pivot</field>
+    </record>
+
+    <record id="view_session_analysis_pivot" model="ir.ui.view">
+        <field name="name">formation.session.analysis.pivot</field>
+        <field name="model">formation.session</field>
+        <field name="arch" type="xml">
+            <pivot string="Planning des Sessions">
+                <field name="date_start" interval="month" type="col"/>
+                <field name="course_id" type="row"/>
+                <field name="seats" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_session_reporting" model="ir.actions.act_window">
+        <field name="name">Analyse des Inscriptions</field>
+        <field name="res_model">formation.session</field>
+        <field name="view_mode">pivot,graph</field>
+    </record>
+
+</odoo>

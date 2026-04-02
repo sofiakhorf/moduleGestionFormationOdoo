@@ -45,12 +45,7 @@
         <field name="view_mode">tree,form</field>
     </record>
 
-    <menuitem id="menu_formation_root" name="Formations CETIC" sequence="10"/>
     
-    <menuitem id="menu_formation_course" 
-              name="Cours" 
-              parent="menu_formation_root" 
-              action="action_formation_course" 
-              sequence="10"/>
+
 
 </odoo>

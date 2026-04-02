@@ -1,0 +1,81 @@
+
+from odoo import models, fields, api
+from odoo.exceptions import ValidationError
+
+
+class FormationSeance(models.Model):
+    _name = 'formation.seance'
+    _description = 'Séance'
+
+    date_day = fields.Date("Date du jour", required=True)
+    start_hour = fields.Float("Heure Début", required=True)
+    end_hour = fields.Float("Heure Fin", required=True)
+    
+    # Relation 1,1 (Association 'composer')
+    session_id = fields.Many2one('formation.session', string="Session", required=True)
+    room_id = fields.Many2one('formation.room', string="Salle", required=True)
+    # PERMET DE FAIRE L'APPEL DEPUIS LA SÉANCE
+    attendance_ids = fields.One2many('formation.attendance', 'seance_id', string="Feuille d'appel")
+
+    # 1. Contrainte de cohérence des dates
+    @api.constrains('start_hour', 'end_hour')
+    def _check_dates(self):
+        for record in self:
+            # Correction : on compare end_hour avec start_hour
+            if record.start_hour and record.end_hour :
+                 if  record.end_hour < record.start_hour:
+                   raise ValidationError("L'heure de fin ne peut pas être antérieure à l'heure de début !")
+                 duration = record.end_hour - record.start_hour
+                 if duration > 12:
+                   raise ValidationError("Une séance ne peut pas durer plus de 12 heures !")
+       
+                 if record.start_hour == record.end_hour:
+                     raise ValidationError("L'heure de début et de fin ne peuvent pas être identiques.")
+                 
+    
+# 2. API  : Éviter que deux seance occupent la même salle aux mêmes dates et que la salle choisi soit en maintenance 
+    @api.constrains('date_day', 'start_hour', 'end_hour', 'room_id')
+    def _check_room_availability_and_state(self):
+        for record in self:
+            if not record.room_id:
+                continue
+                
+            # 1. Vérification du statut "En Travaux"
+            if record.room_id.state == 'maintenance':
+                raise ValidationError(
+                    f"Impossible de réserver : La salle '{record.room_id.name}' "
+                    f"est actuellement en travaux ou en maintenance."
+                )
+
+            # 2. Vérification des conflits de dates (Chevauchement)
+            if record.start_hour and record.end_hour:
+                overlapping_seance = self.search([
+                        ('id', '!=', record.id),
+                        ('room_id', '=', record.room_id.id),
+                        ('date_day', '=', record.date_day),
+                        ('start_hour', '<', record.end_hour),
+                        ('end_hour', '>', record.start_hour),
+                        ])
+                if overlapping_seance:
+                  raise ValidationError(f"La salle {record.room_id.name} est déjà occupée le {record.date_day} "
+                    f"entre {overlapping_seance[0].start_hour}h et {overlapping_seance[0].end_hour}h !"
+                     )
+                
+       
+   # 3. Vérification de la capacité 
+    @api.constrains('room_id', 'session_id')
+    def _check_room_capacity(self):
+        for record in self:
+            # On vérifie que la salle et la session sont bien renseignées
+            if record.room_id and record.session_id:
+                # On compare la capacité de la salle avec les places de la SESSION
+                seats_needed = record.session_id.seats
+                room_capacity = record.room_id.capacity
+                
+                if seats_needed > room_capacity:
+                    raise ValidationError(
+                        f"Capacité insuffisante ! La session '{record.session_id.name}' "
+                        f"nécessite {seats_needed} places, mais la salle '{record.room_id.name}' "
+                        f"ne peut en accueillir que {room_capacity}."
+                    )           
+                            
