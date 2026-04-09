@@ -55,6 +55,8 @@ class FormationSeance(models.Model):
                         ('date_day', '=', record.date_day),
                         ('start_hour', '<', record.end_hour),
                         ('end_hour', '>', record.start_hour),
+                        # IMPORTANT : On ne regarde les conflits qu'avec d'autres sessions ACTIVES
+                        ('session_id.state', 'in', ['confirmed', 'in_progress']),
                         ])
                 if overlapping_seance:
                   raise ValidationError(f"La salle {record.room_id.name} est déjà occupée le {record.date_day} "
@@ -77,5 +79,29 @@ class FormationSeance(models.Model):
                         f"Capacité insuffisante ! La session '{record.session_id.name}' "
                         f"nécessite {seats_needed} places, mais la salle '{record.room_id.name}' "
                         f"ne peut en accueillir que {room_capacity}."
-                    )           
+                    )    
+
+
+
+# 4. API : Vérifier que la date de la séance est dans les limites de la session
+    @api.constrains('date_day', 'session_id')
+    def _check_date_within_session(self):
+        for record in self:
+            # On s'assure que la séance a une date et qu'elle est bien reliée à une session
+            if record.date_day and record.session_id:
+                session = record.session_id
+                
+                # Vérification par rapport à la date de début de la session
+                if session.date_start and record.date_day < session.date_start:
+                    raise ValidationError(
+                        f"Erreur de date : La séance est prévue le {record.date_day}, "
+                        f"mais la session '{session.name}' ne commence que le {session.date_start}."
+                    )
+                
+                # Vérification par rapport à la date de fin de la session
+                if session.date_end and record.date_day > session.date_end:
+                    raise ValidationError(
+                        f"Erreur de date : La séance est prévue le {record.date_day}, "
+                        f"mais la session '{session.name}' se termine le {session.date_end}."
+                    )       
                             
