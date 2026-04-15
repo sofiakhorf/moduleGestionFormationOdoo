@@ -1,5 +1,5 @@
-from odoo import models, fields
-
+from odoo import models, fields, api
+from odoo.exceptions import ValidationError
 
 class FormationCourse(models.Model):
     _name = 'formation.course'
@@ -38,6 +38,8 @@ class FormationAttendance(models.Model):
     # On ajoute la date de la séance en champ lié (related) pour faciliter les recherches/filtres
     # Champ lié pour l'affichage et les filtres
     date_day = fields.Date(related='seance_id.date_day', store=True, string="Date Séance")
+
+
 
 
 

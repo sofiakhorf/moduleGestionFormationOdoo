@@ -47,7 +47,31 @@ class FormationSession(models.Model):
     ], string="Statut", default='draft', tracking=True)
 
     @api.constrains('state')
-    def _check_seance_conflicts_on_state_change(self):
+    def _check_requirements_on_state_change(self):
+        """ 
+        Vérifie les règles métier lors de l'activation d'une session (Confirmée ou En cours).
+        """
+        for session in self:
+            if session.state in ['confirmed', 'in_progress']:
+                # 1. Règle : Dates de début et de fin obligatoires
+                if not session.date_start or not session.date_end:
+                    raise ValidationError("Impossible de confirmer : Les dates de début et de fin doivent être renseignées.")
+                
+                # 2. Règle : Durée formation == Somme durée séances
+                # On calcule la somme des durées (fin - début) de chaque séance
+                total_seances_duration = sum((seance.end_hour - seance.start_hour) for seance in session.seance_ids if seance.start_hour and seance.end_hour)
+                course_duration = session.course_id.duration
+                
+                if total_seances_duration > course_duration:
+                    raise ValidationError(
+                        f"Incohérence de durée : La formation '{session.course_id.name}' dure {course_duration}h, "
+                        f"mais le total actuel de vos séances est superieure à la date pemise c'est à dire  {total_seances_duration}h. "
+                        f"Veuillez ajuster les séances avant de confirmer."
+                    )
+
+                # 3. Vérification des conflits de salle
+        
+        
         """ 
         Si on active une session (Confirmée/En cours), on vérifie que ses séances 
         ne créent pas de conflits avec d'autres sessions déjà actives.
@@ -58,6 +82,8 @@ class FormationSession(models.Model):
                     # On appelle la logique de vérification de la séance
                     # Si un conflit existe, le ValidationError remontera ici
                     seance._check_room_availability_and_state()
+
+
     @api.depends('seance_ids.room_id')
     def _compute_room_ids(self):
         for session in self:
@@ -201,4 +227,17 @@ class FormationSession(models.Model):
             user_id=target_user.id,
             summary="Alerte Session"
         )
+
+    @api.constrains('seats', 'registration_ids')
+    def _check_seats_limit(self):
+        """
+        Règle : Le nombre de participants inscrits ne doit pas dépasser la limite de places.
+        """
+        for record in self:
+            # On vérifie uniquement si une limite de place a été définie (> 0)
+            if record.seats > 0 and len(record.registration_ids) > record.seats:
+                raise ValidationError(
+                    f"Surréservation ! Le nombre de participants actuels ({len(record.registration_ids)}) "
+                    f"dépasse le nombre de places maximum autorisé ({record.seats}) pour cette session."
+                )
 

@@ -6,6 +6,8 @@
     'depends': ['base','mail'], # TRÈS IMPORTANT pour res.partner
     'data': [
         'security/ir.model.access.csv',  # Toujours la sécurité en premier !
+
+        'data/ir_cron.xml',
         'views/formation_views.xml',
         'views/session_views.xml',
         'views/room_views.xml',
@@ -14,6 +16,7 @@
         'views/attendance_views.xml',
         'views/registration_views.xml',
         'views/menus.xml',
+       
     ],
     'installable': True,
     'application': True,

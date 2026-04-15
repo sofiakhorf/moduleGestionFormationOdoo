@@ -1,4 +1,5 @@
 from odoo import models, fields, api
+from odoo.exceptions import ValidationError
 from datetime import timedelta
 
 class FormationRegistration(models.Model):
@@ -96,5 +97,12 @@ class FormationRegistration(models.Model):
             if record.status == 'registered' and record.submission_date:
                 if record.submission_date <= limit_date:
                     record.status = 'completed'
+
+  #evaluation comprise entre 0 et 20
+    @api.constrains('evaluation')
+    def _check_grade_range(self):
+        for record in self:
+            if record.evaluation < 0 or record.evaluation> 20:
+                raise ValidationError("La note d'évaluation doit impérativement être comprise entre 0 et 20.")
                 
                     

@@ -5,13 +5,19 @@
         <field name="name">formation.room.tree</field>
         <field name="model">formation.room</field>
         <field name="arch" type="xml">
-            <tree string="Salles" decoration-danger="state == 'maintenance'" decoration-success="state == 'available'">
+        <tree string="Salles" 
+                  decoration-danger="state == 'maintenance'" 
+                  decoration-success="state == 'available'"
+                  decoration-warning="state == 'occupied'"
+                  decoration-muted="state == 'archived'">
                 <field name="name"/>
                 <field name="location"/>
                 <field name="capacity"/>
                 <field name="state" widget="badge" 
                        decoration-danger="state == 'maintenance'" 
-                       decoration-success="state == 'available'"/>
+                       decoration-success="state == 'available'"
+                       decoration-warning="state == 'occupied'"
+                       decoration-muted="state == 'archived'"/>
             </tree>
         </field>
     </record>
@@ -22,7 +28,7 @@
         <field name="arch" type="xml">
             <form string="Salle">
                 <header>
-                    <field name="state" widget="statusbar" options="{'clickable': '1'}"/>
+                  <field name="state" widget="statusbar" options="{'clickable': '1'}" statusbar_visible="available,occupied,maintenance,archived"/>
                 </header>
                 <sheet>
                     <div class="oe_title">

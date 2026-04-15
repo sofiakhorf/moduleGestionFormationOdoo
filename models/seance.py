@@ -64,24 +64,21 @@ class FormationSeance(models.Model):
                      )
                 
        
-   # 3. Vérification de la capacité 
+# 3. Vérification de la capacité 
     @api.constrains('room_id', 'session_id')
     def _check_room_capacity(self):
         for record in self:
-            # On vérifie que la salle et la session sont bien renseignées
             if record.room_id and record.session_id:
-                # On compare la capacité de la salle avec les places de la SESSION
-                seats_needed = record.session_id.seats
+                # On récupère le nombre RÉEL d'inscrits via la relation
+                participants_count = len(record.session_id.registration_ids)
                 room_capacity = record.room_id.capacity
                 
-                if seats_needed > room_capacity:
+                if participants_count > room_capacity:
                     raise ValidationError(
-                        f"Capacité insuffisante ! La session '{record.session_id.name}' "
-                        f"nécessite {seats_needed} places, mais la salle '{record.room_id.name}' "
+                        f"Capacité de salle insuffisante ! La session '{record.session_id.name}' "
+                        f"compte actuellement {participants_count} inscrits, mais la salle '{record.room_id.name}' "
                         f"ne peut en accueillir que {room_capacity}."
-                    )    
-
-
+                    )
 
 # 4. API : Vérifier que la date de la séance est dans les limites de la session
     @api.constrains('date_day', 'session_id')
@@ -103,5 +100,43 @@ class FormationSeance(models.Model):
                     raise ValidationError(
                         f"Erreur de date : La séance est prévue le {record.date_day}, "
                         f"mais la session '{session.name}' se termine le {session.date_end}."
-                    )       
+                    )     
+
+
+
+
+
+
+    # 5.  Bloquer les séances si session Annulée ou Reportée
+    @api.constrains('session_id')
+    def _check_session_status_for_seance(self):
+        """
+        Empêche de créer ou modifier une séance si la session associée n'est pas active.
+        """
+        for record in self:
+            if record.session_id and record.session_id.state in ['cancelled', 'postponed']:
+                raise ValidationError(
+                    f"Action interdite : Vous ne pouvez pas planifier ou modifier une séance "
+                    f"car la session '{record.session_id.name}' est actuellement "
+                    f"{dict(record.session_id._fields['state'].selection).get(record.session_id.state)}."
+                ) 
                             
+    
+    #Cette règle interdit à une session d'occuper deux salles en même temps le même jour avec chevauchement de temps 
+
+    @api.constrains('date_day', 'start_hour', 'end_hour', 'session_id')
+    def _check_session_overlap(self):
+        for record in self:
+            if record.session_id and record.date_day:
+                overlap = self.search([
+                    ('id', '!=', record.id),
+                    ('session_id', '=', record.session_id.id),
+                    ('date_day', '=', record.date_day),
+                    ('start_hour', '<', record.end_hour),
+                    ('end_hour', '>', record.start_hour)
+                ])
+                if overlap:
+                    raise ValidationError(
+                        f"Conflit de session : Les séances d'une même session ne peuvent pas se chevaucher. "
+                        f"Il y a déjà une séance prévue de {overlap[0].start_hour}h à {overlap[0].end_hour}h."
+                    )

@@ -12,4 +12,7 @@ class ResPartner(models.Model):#un modèle de base de données Odoo
     # Attributs spécifiques au Formateur (MCD)
     expertise = fields.Text("Expertise")
     diploma = fields.Char("Diplôme")
+
+
+    
     
