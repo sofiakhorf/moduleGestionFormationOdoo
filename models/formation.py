@@ -15,10 +15,17 @@ class FormationCourse(models.Model):
     duration = fields.Integer("Durée (Heures)")
 
     # Relation Many2many (Association 'enseigner')
-    instructor_ids = fields.Many2many('res.partner', string="Formateurs habilités", domain=[('is_instructor', '=', True)])
+ 
 
 
-
+    instructor_ids = fields.Many2many(
+            'res.partner',
+            relation='formation_course_instructor_rel',
+            column1='course_id',
+            column2='partner_id',
+            string="Formateurs habilités",
+            domain=[('is_instructor', '=', True)]
+        )
 
 
 class FormationAttendance(models.Model):

@@ -17,6 +17,23 @@ class FormationSeance(models.Model):
     # PERMET DE FAIRE L'APPEL DEPUIS LA SÉANCE
     attendance_ids = fields.One2many('formation.attendance', 'seance_id', string="Feuille d'appel")
 
+    duration = fields.Float(
+        string="Durée (Heures)", 
+        compute="_compute_duration", 
+        store=True, 
+        help="Calculé automatiquement : Heure de fin - Heure de début"
+    )
+
+    @api.depends('start_hour', 'end_hour')
+    def _compute_duration(self):
+        for record in self:
+            if record.start_hour and record.end_hour:
+                # Calcul simple car les heures sont des Float (ex: 14.5 pour 14h30)
+                diff = record.end_hour - record.start_hour
+                # On s'assure que la durée n'est pas négative
+                record.duration = diff if diff > 0 else 0.0
+            else:
+                record.duration = 0.0
     # 1. Contrainte de cohérence des dates
     @api.constrains('start_hour', 'end_hour')
     def _check_dates(self):
@@ -140,3 +157,55 @@ class FormationSeance(models.Model):
                         f"Conflit de session : Les séances d'une même session ne peuvent pas se chevaucher. "
                         f"Il y a déjà une séance prévue de {overlap[0].start_hour}h à {overlap[0].end_hour}h."
                     )
+                
+  # empeche que le meme instructeur supervise une autre session le meme jour avec des horaires qui se chevauche 
+    @api.constrains('date_day', 'start_hour', 'end_hour', 'session_id')
+    def _check_instructor_double_booking(self):
+        """ 
+        Empêche un formateur de donner deux séances différentes 
+        au même moment le même jour.
+        """
+        for record in self:
+            if record.start_hour and record.end_hour and record.session_id and record.session_id.instructor_id:
+                
+                # On récupère l'ID du formateur assigné à la session de cette séance
+                current_instructor = record.session_id.instructor_id.id
+                
+                # On cherche si ce formateur est déjà occupé ailleurs
+                overlapping_seance = self.search([
+                    ('id', '!=', record.id),
+                    ('date_day', '=', record.date_day),
+                    ('start_hour', '<', record.end_hour),
+                    ('end_hour', '>', record.start_hour),
+                    # On cible les séances dont la session appartient au même formateur
+                    ('session_id.instructor_id', '=', current_instructor),
+                    # On ignore les sessions annulées
+                    ('session_id.state', 'not in', ['cancelled', 'draft'])
+                ])
+                
+                if overlapping_seance:
+                    raise ValidationError(
+                        f"Conflit d'emploi du temps ! Le formateur '{record.session_id.instructor_id.name}' "
+                        f"ne peut pas assurer cette séance. Il anime déjà la session "
+                        f"'{overlapping_seance[0].session_id.name}' le {record.date_day} "
+                        f"entre {overlapping_seance[0].start_hour}h et {overlapping_seance[0].end_hour}h."
+                    )
+                
+
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        # 1. Création de la séance
+        seances = super(FormationSeance, self).create(vals_list)
+        
+        for seance in seances:
+            # 2. On récupère les participants déjà inscrits à la session parente
+            participants = seance.session_id.registration_ids
+            
+            # 3. On crée automatiquement leur ligne de présence pour cette nouvelle séance
+            for reg in participants:
+                self.env['formation.attendance'].create({
+                    'seance_id': seance.id,
+                    'partner_id': reg.partner_id.id,
+                })
+        return seances

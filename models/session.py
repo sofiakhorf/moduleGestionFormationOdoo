@@ -17,13 +17,45 @@ class FormationSession(models.Model):
         ('done', 'Terminée')
     ], string="Statut", default='draft')
 
+
+    # 1. Champ technique pour stocker les IDs des formateurs habilités par la formation
+    # Il servira de base pour le filtre (domaine)
+    instructor_eligible_ids = fields.Many2many(
+        'res.partner', 
+        compute='_compute_instructor_eligible_ids'
+    )
+
+    # 2. Mise à jour du champ Formateur avec le domaine dynamique
+    instructor_id = fields.Many2one(
+        'res.partner', 
+        string="Formateur",
+        # Le domaine filtre : 
+        # - Doit être un formateur
+        # - Doit faire partie de la liste des habilités du cours choisi
+        domain="[('is_instructor', '=', True), ('id', 'in', instructor_eligible_ids)]"
+    )
+
+    @api.depends('course_id')
+    def _compute_instructor_eligible_ids(self):
+        """ Calcule la liste des formateurs autorisés pour la formation sélectionnée """
+        for session in self:
+            if session.course_id:
+                # On récupère les formateurs habilités définis dans le cours
+                session.instructor_eligible_ids = session.course_id.instructor_ids
+            else:
+                # Si aucun cours n'est choisi, la liste est vide
+                session.instructor_eligible_ids = self.env['res.partner'].browse()
+
+
     
+    duration_total = fields.Float(string="Durée Totale (Heures)", compute='_compute_duration_total', store=True)
+    attendance_threshold = fields.Float(string="Seuil de présence (%)", default=80.0)
+   
 
-
-
+  
     # Relations Many2one
     course_id = fields.Many2one('formation.course', string="Formation", required=True)
-    instructor_id = fields.Many2one('res.partner', string="Formateur") # Ajoute domain plus tard
+    
  
 
     # Relations One2many
@@ -35,7 +67,7 @@ class FormationSession(models.Model):
         'formation.room', 
         string="Salles utilisées", 
         compute='_compute_room_ids',
-        # store=True # Décommente cette ligne si tu as besoin de chercher une session par salle dans la barre de recherche Odoo
+        
     )
     state = fields.Selection([
         ('draft', 'Brouillon'),
@@ -45,6 +77,32 @@ class FormationSession(models.Model):
         ('done', 'Terminée'),
         ('cancelled', 'Annulée'),
     ], string="Statut", default='draft', tracking=True)
+
+
+    @api.depends('seance_ids.start_hour', 'seance_ids.end_hour')
+    def _compute_duration_total(self):
+        for session in self:
+            session.duration_total = sum(s.end_hour - s.start_hour for s in session.seance_ids)
+
+
+    def action_notify_missing_evaluations(self):
+        """
+        Envoie une notification si des évaluations manquent à la fin de la session
+        uniquement pour les participants dont le statut est 'Inscrit'.
+        """
+        for session in self:
+            # On filtre les inscriptions selon deux critères :
+            # 1. L'évaluation est à 0 ou vide (not r.evaluation)
+            # 2. Le statut de l'étudiant est exactement 'registered'
+            students_without_eval = session.registration_ids.filtered(
+                lambda r: (r.evaluation == 0.0 or not r.evaluation) and r.status == 'registered'
+            )
+
+            if students_without_eval:
+                self._create_admin_activity(
+                    f"Alerte : Évaluations manquantes pour {len(students_without_eval)} "
+                    f"participants inscrits dans la session {session.name}"
+                )
 
     @api.constrains('state')
     def _check_requirements_on_state_change(self):
@@ -69,19 +127,23 @@ class FormationSession(models.Model):
                         f"Veuillez ajuster les séances avant de confirmer."
                     )
 
+
+                """ 
+                    Si on active une session (Confirmée/En cours), on vérifie que ses séances 
+                    ne créent pas de conflits avec d'autres sessions déjà actives.
+                    """
                 # 3. Vérification des conflits de salle
-        
-        
-        """ 
-        Si on active une session (Confirmée/En cours), on vérifie que ses séances 
-        ne créent pas de conflits avec d'autres sessions déjà actives.
-        """
-        for session in self:
-            if session.state in ['confirmed', 'in_progress']:
                 for seance in session.seance_ids:
-                    # On appelle la logique de vérification de la séance
-                    # Si un conflit existe, le ValidationError remontera ici
-                    seance._check_room_availability_and_state()
+                        # On appelle la logique de vérification de la séance
+                        # Si un conflit existe, le ValidationError remontera ici
+                        seance._check_room_availability_and_state()
+
+        
+           
+
+        
+       
+  
 
 
     @api.depends('seance_ids.room_id')
@@ -90,6 +152,7 @@ class FormationSession(models.Model):
             # La méthode .mapped() est ultra-optimisée dans Odoo. 
             # Elle parcourt toutes les séances de la session et extrait les salles uniques.
             session.room_ids = session.seance_ids.mapped('room_id')
+            
 
     # --- AJOUT DE L'API ODOO ---
 

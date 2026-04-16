@@ -2,63 +2,81 @@
 <odoo>
 
     <menuitem id="menu_formation_root" 
-              name="gestion de Formations " 
+              name="Gestion de Formations" 
               sequence="10"/>
 
-    <menuitem id="menu_formation_cours" 
-              name="Cours" 
+    <menuitem id="menu_formation_main" 
+              name="Formation" 
               parent="menu_formation_root" 
-              action="action_formation_course" 
               sequence="10"/>
 
-    <menuitem id="menu_formation_session" 
-              name="Sessions" 
+        <menuitem id="menu_formation_cours" 
+                  name="Cours" 
+                  parent="menu_formation_main" 
+                  action="action_formation_course" 
+                  sequence="10"/>
+
+        <menuitem id="menu_formation_session" 
+                  name="Sessions" 
+                  parent="menu_formation_main" 
+                  action="action_formation_session" 
+                  sequence="20"/>
+
+        <menuitem id="menu_formation_seance" 
+                  name="Planning" 
+                  parent="menu_formation_main" 
+                  action="action_formation_seance" 
+                  sequence="30"/>
+
+    <menuitem id="menu_formation_tracking" 
+              name="Gestion Participants" 
               parent="menu_formation_root" 
-              action="action_formation_session" 
               sequence="20"/>
 
-    <menuitem id="menu_formation_seance" 
-              name="Planning" 
-              parent="menu_formation_root" 
-              action="action_formation_seance" 
-              sequence="30"/>
+        <menuitem id="menu_formation_inscription" 
+                  name="Inscriptions" 
+                  parent="menu_formation_tracking"
+                  action="action_formation_registration"
+                  sequence="10"/>
 
-
-    <menuitem id="menu_formation_room" 
-              name="Salles" 
-              parent="menu_formation_root" 
-              action="action_formation_room" 
-              sequence="40"/>
+        <menuitem id="menu_formation_attendance" 
+                  name="Présences" 
+                  parent="menu_formation_tracking" 
+                  action="action_formation_attendance"
+                  sequence="20"/>
 
     <menuitem id="menu_formation_analyse" 
               name="Analyse" 
               parent="menu_formation_root" 
-              sequence="50"/>
+              sequence="30"/>
 
-    <menuitem id="menu_report_session" 
-              name="Analyse des Sessions" 
-              parent="menu_formation_analyse" 
-              action="action_session_reporting" 
-              sequence="10"/>
+        <menuitem id="menu_report_session" 
+                  name="Analyse des Sessions" 
+                  parent="menu_formation_analyse" 
+                  action="action_session_reporting" 
+                  sequence="10"/>
 
-  
-    <menuitem id="menu_report_rooms" 
-               name="Utilisation des Salles" 
-              parent="menu_formation_analyse" 
-              action="action_room_reporting" 
-              sequence="20"/>
+        <menuitem id="menu_report_rooms" 
+                   name="Utilisation des Salles" 
+                  parent="menu_formation_analyse" 
+                  action="action_room_reporting" 
+                  sequence="20"/>
 
-    <menuitem id="menu_formation_inscription" 
-              name="inscription" 
-              parent="menu_formation_root"
-              action="action_formation_registration"
-              sequence="60"/>
-
-    <menuitem id="menu_formation_attendance" 
-              name="attendance" 
+    <menuitem id="menu_formation_config" 
+              name="Configuration" 
               parent="menu_formation_root" 
-              action="action_formation_attendance"
-              sequence="70"/>
+              sequence="40"/>
 
+        <menuitem id="menu_formation_room" 
+                  name="Salles" 
+                  parent="menu_formation_config" 
+                  action="action_formation_room" 
+                  sequence="10"/>
+
+        <menuitem id="menu_formation_instructor" 
+                  name="Formateurs" 
+                  parent="menu_formation_config" 
+                  action="action_formation_instructor" 
+                  sequence="20"/>
     
 </odoo>

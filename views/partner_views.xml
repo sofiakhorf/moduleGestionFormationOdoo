@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_formation_form" model="ir.ui.view">
+        <field name="name">res.partner.formation.form</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+        <notebook position="inside">
+            <page string="Pédagogie" invisible="not is_instructor and not is_student">
+                <group>
+                    <group>
+                        <field name="is_instructor"/>
+                        <field name="is_student"/>
+                    </group>
+                    <group invisible="not is_instructor">
+                        <field name="diploma"/>
+                        <field name="expertise"/>
+                    </group>
+                </group>
+            </page>
+
+            <page string="Cours habilités" invisible="not is_instructor">
+                <field name="course_ids" nolabel="1">
+                    <tree>
+                        <field name="name"/>
+                        <field name="level"/>
+                        <field name="duration"/>
+                    </tree>
+                </field>
+            </page>
+        </notebook>
+        </field>
+    </record>
+
+    <record id="view_partner_instructor_tree" model="ir.ui.view">
+        <field name="name">res.partner.instructor.tree</field>
+        <field name="model">res.partner</field>
+        <field name="arch" type="xml">
+            <tree string="Formateurs">
+                <field name="name"/>
+                <field name="diploma"/>
+                <field name="expertise"/>
+                <field name="email"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_formation_instructor" model="ir.actions.act_window">
+        <field name="name">Formateurs</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('is_instructor', '=', True)]</field>
+        <field name="context">{'default_is_instructor': True}</field>
+        <field name="view_ids" eval="[(5, 0, 0), 
+            (0, 0, {'view_mode': 'tree', 'view_id': ref('view_partner_instructor_tree')}), 
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_partner_formation_form')})]"/>
+    </record>
+</odoo>

@@ -10,6 +10,7 @@
                 <field name="date_day"/>
                 <field name="start_hour" widget="float_time"/>
                 <field name="end_hour" widget="float_time"/>
+                <field name="duration" widget="float_time" sum="Total Heures"/>
             </tree>
         </field>
     </record>

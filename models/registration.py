@@ -15,7 +15,7 @@ class FormationRegistration(models.Model):
     project_theme = fields.Char("Thème du projet")
     project_link = fields.Char("Lien du projet")
     submission_date = fields.Date("Date de soumission")
-    evaluation = fields.Float("Évaluation")
+   
     
     status = fields.Selection([
         ('registered', 'Inscrit'),
@@ -35,6 +35,9 @@ class FormationRegistration(models.Model):
     
         help="Coché automatiquement si l'étudiant dépasse 5 absences"
     )
+
+    # Calcul automatique de la note selon le taux de présence
+    evaluation = fields.Float("Taux d'assistance", compute="_compute_attendance_rate")
 
     # Une seule fonction pour calculer les deux champs dynamiquement
     def _compute_absence_count(self):
@@ -106,3 +109,58 @@ class FormationRegistration(models.Model):
                 raise ValidationError("La note d'évaluation doit impérativement être comprise entre 0 et 20.")
                 
                     
+
+# Action pour le bouton PDF
+    def action_print_certificate(self):
+        # Ici tu lieras l'action de ton rapport PDF
+        return self.env.ref('ton_module.action_report_attestation').report_action(self)
+
+    # Voir les présences d'un participant spécifique
+    def action_view_attendance(self):
+        return {
+            'name': f'Présences de {self.partner_id.name}',
+            'type': 'ir.actions.act_window',
+            'res_model': 'formation.attendance',
+            'view_mode': 'tree',
+            'domain': [('partner_id', '=', self.partner_id.id), ('seance_id.session_id', '=', self.session_id.id)],
+            'target': 'new',
+        }
+    
+
+    @api.depends('session_id.seance_ids', 'session_id.duration_total')
+    def _compute_attendance_rate(self):
+        for reg in self:
+            total_h = reg.session_id.duration_total
+            if total_h <= 0:
+                reg.evaluation = 0
+                continue
+            # Somme des heures des séances où l'élève était présent
+            present_h = sum(self.env['formation.attendance'].search([
+                ('partner_id', '=', reg.partner_id.id),
+                ('seance_id.session_id', '=', reg.session_id.id),
+                ('attendance_status', '=', 'present')
+            ]).mapped('seance_id.duration'))
+            reg.evaluation = (present_h / total_h) * 100
+
+
+
+    
+  
+    
+    @api.model_create_multi
+    def create(self, vals_list):
+        # 1. Création standard de l'inscription
+        registrations = super(FormationRegistration, self).create(vals_list)
+        
+        for reg in registrations:
+            # 2. On récupère toutes les séances déjà existantes pour cette session
+            seances = reg.session_id.seance_ids
+            
+            # 3. Pour chaque séance, on crée une ligne de présence "Brouillon" pour ce participant
+            for seance in seances:
+                self.env['formation.attendance'].create({
+                    'seance_id': seance.id,
+                    'partner_id': reg.partner_id.id,
+                    'attendance_status': '',
+                })
+        return registrations

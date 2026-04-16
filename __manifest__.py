@@ -8,6 +8,7 @@
         'security/ir.model.access.csv',  # Toujours la sécurité en premier !
 
         'data/ir_cron.xml',
+        
         'views/formation_views.xml',
         'views/session_views.xml',
         'views/room_views.xml',
@@ -15,6 +16,7 @@
         'views/formation_dashboard_views.xml',
         'views/attendance_views.xml',
         'views/registration_views.xml',
+        'views/partner_views.xml',
         'views/menus.xml',
        
     ],

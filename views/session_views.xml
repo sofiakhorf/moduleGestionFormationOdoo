@@ -5,8 +5,12 @@
         <field name="name">formation.session.tree</field>
         <field name="model">formation.session</field>
         <field name="arch" type="xml">
+
+         
             <tree string="Sessions" decoration-info="state == 'draft'" decoration-success="state == 'confirmed'">
+
                 <field name="name"/>
+                <field name="instructor_eligible_ids" invisible="1"/>
                 <field name="course_id"/>
                 <field name="instructor_id"/>
                 <field name="date_start"/>
@@ -29,6 +33,12 @@
                     <header>
                         <button name="action_confirm" string="Confirmer" type="object" class="oe_highlight" 
                                 invisible="state not in ['draft', 'postponed']"/>
+                        
+                        <button name="action_notify_missing_evaluations" 
+                        string="Vérifier Évaluations" 
+                        type="object" 
+                        class="oe_link" 
+                        invisible="state != 'done'"/>
 
                         <button name="action_in_progress" string="Démarrer la formation" type="object" class="oe_highlight" 
                                 invisible="state != 'confirmed'"/>
@@ -58,8 +68,10 @@
                     <group>
                         <group string="Configuration">
                             <field name="course_id"/>
+                            <field name="instructor_eligible_ids" invisible="1"/>
                             <field name="instructor_id"/>
-                            <field name="room_ids" widget="many2many_tags" readonly="1"/>
+                            <field name="duration_total" widget="float_time" readonly="1"/>
+                            
                             
                         </group>
 
@@ -82,21 +94,33 @@
                             </field>
                         </page>
 
-                        <page string="Liste des Participants" name="registrations">
+                        <page string="Salles Utilisées">
+                            <field name="room_ids">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="location"/>
+                                    <field name="capacity"/> </tree>
+                            </field>
+                        </page>
+                        <page string="Participants">
+                           
                             <field name="registration_ids">
-                                <tree string="Inscriptions" editable="bottom">
-                                    <field name="partner_id" string="Étudiant"/>
-                                    
-                                    <field name="project_theme"/>
-                                    <field name="submission_date"/>
+                                <tree>
+                                    <field name="partner_id"/>
                                     <field name="evaluation"/>
-                                    
                                     <field name="status" widget="badge" 
                                         decoration-success="status == 'registered'" 
                                         decoration-danger="status == 'cancelled'"/>
+                                    <button name="action_print_certificate" string="Imprimer Attestation" 
+                                            type="object" icon="fa-print"
+                                            invisible="parent.state != 'done' or status != 'completed'"/>
+                                    <button name="action_view_attendance" string="Détails Présences" 
+                                            type="object" icon="fa-calendar"/>
                                 </tree>
                             </field>
                         </page>
+
+                                  
                     </notebook>
                 </sheet>
                 <div class="oe_chatter">

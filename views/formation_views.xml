@@ -26,12 +26,20 @@
                         </group>
                         <group>
                             <field name="duration"/>
-                            <field name="instructor_ids" widget="many2many_tags"/>
                         </group>
                     </group>
                     <notebook>
                         <page string="Description">
                             <field name="description"/>
+                        </page>
+                        <page string="Formateurs habilités">
+                            <field name="instructor_ids">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="diploma"/>
+                                    <field name="expertise"/>
+                                </tree>
+                            </field>
                         </page>
                     </notebook>
                 </sheet>
