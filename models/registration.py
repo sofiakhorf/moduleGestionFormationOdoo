@@ -164,3 +164,12 @@ class FormationRegistration(models.Model):
                     'attendance_status': '',
                 })
         return registrations
+    
+    def unlink(self):
+        for reg in self:
+            # Supprimer les présences liées à ce participant pour cette session spécifique
+            self.env['formation.attendance'].search([
+                ('partner_id', '=', reg.partner_id.id),
+                ('seance_id.session_id', '=', reg.session_id.id)
+            ]).unlink()
+        return super(FormationRegistration, self).unlink()

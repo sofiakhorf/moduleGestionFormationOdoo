@@ -6,7 +6,7 @@ from odoo.exceptions import ValidationError
 class FormationSeance(models.Model):
     _name = 'formation.seance'
     _description = 'Séance'
-
+ 
     date_day = fields.Date("Date du jour", required=True)
     start_hour = fields.Float("Heure Début", required=True)
     end_hour = fields.Float("Heure Fin", required=True)
@@ -23,6 +23,49 @@ class FormationSeance(models.Model):
         store=True, 
         help="Calculé automatiquement : Heure de fin - Heure de début"
     )
+       # 1. Calcul de l'occupation par séance
+    occupation_percent = fields.Integer(
+        string="Présents", 
+        compute="_occupation_percent_count", 
+        store=True
+    )
+
+
+    @api.depends('attendance_ids.attendance_status')
+    def _occupation_percent_count(self):
+        for record in self:
+            # On compte uniquement ceux marqués 'present'
+            present_count = len(record.attendance_ids.filtered(lambda a: a.attendance_status == 'present'))
+            # Calcul du pourcentage par rapport à la capacité de la salle
+            if record.session_id and record.session_id.seats > 0:
+                record.occupation_percent = (present_count / record.session_id.seats) * 100
+            else:
+                record.occupation_percent = 0.0
+
+    @api.onchange('date_day', 'start_hour', 'end_hour')
+    def _onchange_seance_times(self):
+        # 1. Préparation du dictionnaire de réponse
+        res = {'domain': {}} 
+        
+        if self.date_day and self.start_hour and self.end_hour:
+            # 2. Ton calcul pour trouver les IDs des salles occupées
+            unavailable_rooms = self.env['formation.seance'].search([
+                ('id', '!=', self._origin.id if self._origin else False),
+                ('date_day', '=', self.date_day),
+                ('start_hour', '<', self.end_hour),
+                ('end_hour', '>', self.start_hour),
+            ]).mapped('room_id.id')
+            
+            # 3. L'INSTRUCTION : On dit à Odoo d'appliquer ce filtre au champ 'room_id'
+            res['domain'] = {
+                'room_id': [
+                    ('id', 'not in', unavailable_rooms), 
+                    
+                ]
+            }
+        
+        # 4. LE RETOUR : Odoo reçoit 'res' et met à jour l'interface automatiquement
+        return res
 
     @api.depends('start_hour', 'end_hour')
     def _compute_duration(self):

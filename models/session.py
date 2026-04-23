@@ -156,17 +156,9 @@ class FormationSession(models.Model):
 
     # --- AJOUT DE L'API ODOO ---
 
-    # 1. Calcul du taux d'occupation (Progress Bar)
-    taken_seats_percent = fields.Float(string="Occupation (%)", compute='_compute_taken_seats')
+   
 
-    @api.depends('seats', 'registration_ids')
-    def _compute_taken_seats(self):
-        for record in self:
-            if not record.seats:
-                record.taken_seats_percent = 0.0
-            else:
-                # On compte le nombre d'IDs dans la liste des inscriptions
-                record.taken_seats_percent = 100.0 * len(record.registration_ids) / record.seats
+  
 
     # 2. Contrainte de cohérence des dates
     @api.constrains('date_start', 'date_end')

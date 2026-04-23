@@ -16,7 +16,7 @@
                 <field name="date_start"/>
                 <field name="date_end"/>
                 <field name="seats"/>
-                <field name="taken_seats_percent" widget="progressbar"/>
+                
                 <field name="state" widget="badge" 
                        decoration-info="state == 'draft'" 
                        decoration-success="state == 'confirmed'" 
@@ -79,7 +79,7 @@
                             <field name="date_start"/>
                             <field name="date_end"/>
                             <field name="seats"/>
-                            <field name="taken_seats_percent" widget="progressbar"/>
+                           
                         </group>
                     </group>
 
