@@ -141,10 +141,6 @@ class FormationSession(models.Model):
         
            
 
-        
-       
-  
-
 
     @api.depends('seance_ids.room_id')
     def _compute_room_ids(self):
@@ -153,9 +149,6 @@ class FormationSession(models.Model):
             # Elle parcourt toutes les séances de la session et extrait les salles uniques.
             session.room_ids = session.seance_ids.mapped('room_id')
             
-
-    # --- AJOUT DE L'API ODOO ---
-
    
 
   
@@ -217,8 +210,7 @@ class FormationSession(models.Model):
                 new_state = 'done'
 
             # Cas 3 : Retour arrière (Si on modifie les dates manuellement)
-            elif record.state == 'done' and record.date_end and record.date_end >= today:
-                new_state = 'in_progress'
+
             elif record.state == 'in_progress' and record.date_start > today:
                 new_state = 'confirmed'
 

@@ -107,13 +107,19 @@ class FormationRegistration(models.Model):
         for record in self:
             if record.evaluation < 0 or record.evaluation> 20:
                 raise ValidationError("La note d'évaluation doit impérativement être comprise entre 0 et 20.")
-                
-                    
-
-# Action pour le bouton PDF
+    # Action pour le bouton PDF                
     def action_print_certificate(self):
-        # Ici tu lieras l'action de ton rapport PDF
-        return self.env.ref('ton_module.action_report_attestation').report_action(self)
+            """ 
+            Cette fonction déclenche l'impression du PDF. 
+            self.env.ref(...) cherche l'ID de l'action définie dans le XML.
+            """
+            # On s'assure que l'enregistrement est bien chargé
+            self.ensure_one()
+            
+            # On appelle l'action du rapport définie en XML
+            return self.env.ref('gestion_formation.action_report_attestation').report_action(self)                   
+
+
 
     # Voir les présences d'un participant spécifique
     def action_view_attendance(self):

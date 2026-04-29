@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+ 
+    <record id="action_report_attestation" model="ir.actions.report">
+        <field name="name">Attestation de Formation</field>
+        <field name="model">formation.registration</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">gestion_formation.report_attestation_template</field>
+        <field name="report_file">gestion_formation.report_attestation_template</field>
+        <field name="print_report_name">'Attestation_%s' % (object.partner_id.name)</field>
+        <field name="binding_model_id" ref="model_formation_registration"/>
+        <field name="binding_type">report</field>
+    </record>
+<template id="report_attestation_template">
+    <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="o">
+            <t t-call="web.basic_layout">
+                <div class="page" style=" padding: 30px; margin: 0 auto; margin-top: -20px; margin-left: -20px; text-align: center; font-family: 'Arial', sans-serif; min-height: 950px; background-color: white; width: 95%;">
+                    
+                    <div style="margin-bottom: 40px; border-bottom: 3px solid #2c3e50; padding-bottom: 15px; margin-top: 10px;">
+                        <h1 style="color: #2c3e50; text-transform: uppercase; font-size: 38px; letter-spacing: 2px; font-weight: bold; margin: 0;">
+                            Attestation de Formation
+                        </h1>
+                    </div>
+
+                    <div style="margin-top: 40px;">
+                        <p style="font-size: 20px;">Le centre <strong>CETIC</strong> certifie que</p>
+                        
+                        <h2 style="color: #e67e22; font-size: 42px; margin: 25px 0; font-style: italic; font-weight: bold;">
+                            <span t-field="o.partner_id.name"/>
+                        </h2>
+
+                        <p style="font-size: 19px; line-height: 1.6;">
+                            A suivi avec succès la formation intitulée :<br/>
+                            <span style="font-size: 26px; font-weight: bold; color: #2c3e50;">
+                                <span t-field="o.session_id.course_id.name"/>
+                            </span>
+                        </p>
+
+                        <div style="margin-top: 35px; font-size: 18px; background-color: #f9f9f9; padding: 15px; border-radius: 10px; display: inline-block; border: 1px solid #eee;">
+                            <strong>Session :</strong> <span t-field="o.session_id.name"/><br/>
+                            <strong>Période :</strong> du <span t-field="o.session_id.date_start" t-options='{"widget": "date"}'/> 
+                            au <span t-field="o.session_id.date_end" t-options='{"widget": "date"}'/>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 120px; overflow: hidden;">
+                        <div style="float: left; width: 45%; text-align: left; padding-left: 30px;">
+                            <p style="font-size: 17px; font-weight: bold; text-decoration: underline;">L'Intéressé(e)</p>
+                        </div>
+                        <div style="float: right; width: 50%; text-align: right; padding-right: 30px;">
+                            <p style="font-size: 17px;">Fait à Alger</p>
+                            <p style="margin-top: 10px; font-size: 17px; font-weight: bold;">La Direction du CETIC</p>
+                            
+                            <div style="margin-top: 25px; border: 2px dashed #bdc3c7; height: 110px; width: 170px; display: inline-block; line-height: 110px; color: #bdc3c7; font-size: 13px;">
+                                Cachet &amp; Signature
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </t>
+</template>
+
+</odoo>

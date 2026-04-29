@@ -28,12 +28,14 @@
                             <field name="occupation_percent" widget="progressbar" string="Occupation"/>
                         </group>
                         <group>
+                            <field name="unavailable_room_ids" invisible="1"/>
+                            <field name="room_id" 
+                                domain="[('id', 'not in', unavailable_room_ids)]"
+                                options="{'no_create': True, 'no_open': True}"/>
                             
                             
-                            <field name="room_id" options="{'no_create': True}"/>
-                              
-                                <field name="start_hour"  widget="float_time"/>
-                                <field name="end_hour" widget="float_time"/>
+                            <field name="start_hour"  widget="float_time"/>
+                            <field name="end_hour" widget="float_time"/>
                         </group>
                     </group>
 

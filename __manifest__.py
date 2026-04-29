@@ -18,6 +18,7 @@
         'views/registration_views.xml',
         'views/partner_views.xml',
         'views/menus.xml',
+        'report/report_registration.xml',
        
     ],
     'installable': True,

@@ -29,6 +29,31 @@ class FormationSeance(models.Model):
         compute="_occupation_percent_count", 
         store=True
     )
+    # . Le champ technique qui va stocker les salles occupées
+    unavailable_room_ids = fields.Many2many(
+        'formation.room',
+        compute='_compute_unavailable_rooms'
+    )
+
+    # 2. La fonction de calcul (qui remplace le onchange)
+    @api.depends('date_day', 'start_hour', 'end_hour')
+    def _compute_unavailable_rooms(self):
+        for record in self:
+            if record.date_day and record.start_hour and record.end_hour:
+                # On utilise l'ID d'origine si on est en train de créer un nouvel enregistrement
+                current_id = record._origin.id if record._origin else False
+                
+               
+                overlapping = self.env['formation.seance'].search([
+                    ('id', '!=', current_id),
+                    ('date_day', '=', record.date_day),
+                    ('start_hour', '<', record.end_hour),
+                    ('end_hour', '>', record.start_hour),
+                    ('session_id.state', 'in', ['confirmed', 'in_progress']) # Logique métier respectée
+                ])
+                record.unavailable_room_ids = overlapping.mapped('room_id')
+            else:
+                record.unavailable_room_ids = False
 
 
     @api.depends('attendance_ids.attendance_status')
@@ -54,7 +79,7 @@ class FormationSeance(models.Model):
                 ('date_day', '=', self.date_day),
                 ('start_hour', '<', self.end_hour),
                 ('end_hour', '>', self.start_hour),
-            ]).mapped('room_id.id')
+            ]).mapped('room_id').ids
             
             # 3. L'INSTRUCTION : On dit à Odoo d'appliquer ce filtre au champ 'room_id'
             res['domain'] = {
