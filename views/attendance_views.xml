@@ -9,7 +9,8 @@
         <tree editable="bottom">
             <field name="date_day" readonly="1"/>
             <field name="seance_id"/>
-            <field name="partner_id"/>
+            <field name="registration_id"/>
+            <field name="partner_id" readonly="1"/>
             <field name="attendance_status" widget="radio" options="{'horizontal': true}"/>
         </tree>
     </field>

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- 1. FORMAT DE PAPIER (PAYSAGE SANS MARGES) -->
+    <record id="paperformat_certificat_landscape" model="report.paperformat">
+        <field name="name">Certificat Paysage</field>
+        <field name="default" eval="True"/>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">0</field>
+        <field name="margin_bottom">0</field>
+        <field name="margin_left">0</field>
+        <field name="margin_right">0</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <!-- 2. DESIGN DU CERTIFICAT (TEMPLATE QWEB) -->
+    <template id="report_attestation_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <div class="page" style="position: relative; width: 100%; height: 210mm; background-color: #FDFBF5; overflow: hidden; font-family: 'Arial', sans-serif; box-sizing: border-box;">
+                    
+                    <!-- Angles Géométriques - Haut Gauche -->
+                    <div style="position: absolute; top: 0; left: 0; width: 250px; border-top: 35px solid #14284B;"></div>
+                    <div style="position: absolute; top: 0; left: 0; height: 250px; border-left: 35px solid #14284B;"></div>
+                    <div style="position: absolute; top: 60px; left: 60px; width: 120px; height: 120px; border-top: 5px solid #D4A373; border-left: 5px solid #D4A373;"></div>
+
+                    <!-- Angles Géométriques - Bas Droite -->
+                    <div style="position: absolute; bottom: 0; right: 0; width: 250px; border-bottom: 35px solid #14284B;"></div>
+                    <div style="position: absolute; bottom: 0; right: 0; height: 250px; border-right: 35px solid #14284B;"></div>
+                    <div style="position: absolute; bottom: 60px; right: 60px; width: 120px; height: 120px; border-bottom: 5px solid #D4A373; border-right: 5px solid #D4A373;"></div>
+
+                    <!-- Contenu Central -->
+                    <div style="position: absolute; top: 120px; left: 10%; right: 10%; text-align: center;">
+                        
+                        <!-- Titre -->
+                        <div style="color: #14284B; font-size: 55px; font-weight: 900; letter-spacing: 4px; margin-bottom: 0;">
+                            CERTIFICAT
+                        </div>
+                        <div style="background-color: #D4A373; color: white; display: inline-block; padding: 6px 30px; font-size: 20px; font-weight: bold; letter-spacing: 3px; margin-top: 5px;">
+                            DE REUSSITE
+                        </div>
+
+                        <!-- Nom de l'étudiant -->
+                        <div style="margin-top: 70px;">
+                            <div style="font-size: 42px; color: #14284B; border-bottom: 1px solid #14284B; display: inline-block; width: 75%; padding-bottom: 10px;">
+                                <span t-field="o.partner_id.name"/>
+                            </div>
+                            <!-- Sous-titre dynamique -->
+                            <div style="font-size: 16px; color: #14284B; margin-top: 25px;">
+                                qui a complete avec succes le cours <strong style="font-weight: bold; color: #14284B;"><span t-field="o.session_id.course_id.name"/></strong> 
+                                le <span t-field="o.session_id.date_end"/>.
+                            </div>
+                        </div>
+
+                        <!-- Pied de page (Signatures et Infos) -->
+                        <table style="width: 100%; margin-top: 80px; color: #14284B;">
+                            <tr>
+                                <!-- Bloc Instructeur -->
+                                <td style="width: 33%; text-align: left; vertical-align: bottom;">
+                                    <div style="border-bottom: 1px solid #14284B; width: 85%; padding-bottom: 5px; font-size: 18px;">
+                                        <!-- Affiche le nom du formateur assigné à la session, sinon laisse un espace -->
+                                        <span t-if="o.session_id.instructor_id" t-esc="o.session_id.instructor_id.name"/>
+                                        <span t-else="">L'Instructeur</span>
+                                    </div>
+                                    <div style="font-size: 13px; margin-top: 5px; font-weight: bold;">Charge de cours</div>
+                                </td>
+                                
+                                <!-- Bloc Signature (Simulation) -->
+                                <td style="width: 33%; text-align: center; vertical-align: bottom;">
+                                    <div style="font-family: 'Georgia', serif; font-size: 28px; font-style: italic; color: #555; transform: rotate(-8deg);">
+                                        Approuve
+                                    </div>
+                                </td>
+                                
+                                <!-- Bloc Informations -->
+                                <td style="width: 33%; text-align: right; font-size: 13px; font-weight: bold; vertical-align: bottom;">
+                                    <div>Signe le <span t-field="o.session_id.date_end"/></div>
+                                    <div style="margin-top: 5px;">Numero de certificat : <span t-field="o.id"/></div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- 3. DÉCLARATION DE L'ACTION DE RAPPORT -->
+    <record id="action_report_attestation" model="ir.actions.report">
+        <field name="name">Certificat de Réussite</field>
+        <field name="model">formation.registration</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">module_gestion_formation_odoo.report_attestation_template</field>
+        <field name="report_file">module_gestion_formation_odoo.report_attestation_template</field>
+        <field name="print_report_name">'Certificat_%s' % (object.partner_id.name)</field>
+        <field name="binding_model_id" ref="model_formation_registration"/>
+        <field name="binding_type">report</field>
+        <!-- LIAISON AVEC LE FORMAT PAYSAGE DÉFINI PLUS HAUT -->
+        <field name="paperformat_id" ref="module_gestion_formation_odoo.paperformat_certificat_landscape"/>
+    </record>
+
+</odoo>

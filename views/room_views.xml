@@ -6,18 +6,17 @@
         <field name="model">formation.room</field>
         <field name="arch" type="xml">
         <tree string="Salles" 
-                  decoration-danger="state == 'maintenance'" 
-                  decoration-success="state == 'available'"
-                  decoration-warning="state == 'occupied'"
-                  decoration-muted="state == 'archived'">
+                  decoration-danger="admin_state == 'maintenance'" 
+                  decoration-muted="admin_state == 'archived'"
+                  decoration-warning="is_occupied_now == True">
                 <field name="name"/>
                 <field name="location"/>
                 <field name="capacity"/>
-                <field name="state" widget="badge" 
-                       decoration-danger="state == 'maintenance'" 
-                       decoration-success="state == 'available'"
-                       decoration-warning="state == 'occupied'"
-                       decoration-muted="state == 'archived'"/>
+                <field name="admin_state" widget="badge" 
+                       decoration-danger="admin_state == 'maintenance'" 
+                       decoration-success="admin_state == 'active'"
+                       decoration-muted="admin_state == 'archived'"/>
+                <field name="is_occupied_now" widget="boolean_toggle" readonly="1"/>
             </tree>
         </field>
     </record>
@@ -28,7 +27,7 @@
         <field name="arch" type="xml">
             <form string="Salle">
                 <header>
-                  <field name="state" widget="statusbar" options="{'clickable': '1'}" statusbar_visible="available,occupied,maintenance,archived"/>
+                  <field name="admin_state" widget="statusbar" options="{'clickable': '1'}" statusbar_visible="active,maintenance,archived"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -38,6 +37,7 @@
                     <group>
                         <group>
                             <field name="location"/>
+                            <field name="is_occupied_now" widget="boolean_toggle" readonly="1"/>
                         </group>
                         <group>
                             <field name="capacity"/>
@@ -69,4 +69,3 @@
 
 
 </odoo>
-

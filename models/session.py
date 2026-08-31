@@ -4,71 +4,18 @@ from odoo.exceptions import ValidationError
 
 class FormationSession(models.Model):
     _name = 'formation.session'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = [ 'formation.notification.mixin']
     _description = 'Session'
 
+    # =========================================================================
+    # 1. CHAMPS & RELATIONS
+    # =========================================================================
     name = fields.Char("Nom de la Session", required=True)
     date_start = fields.Date("Date Début")
     date_end = fields.Date("Date Fin")
-    seats = fields.Integer("Nombre de places" ,store=True)
-    state = fields.Selection([
-        ('draft', 'Brouillon'),
-        ('confirmed', 'Confirmée'),
-        ('done', 'Terminée')
-    ], string="Statut", default='draft')
-
-
-    # 1. Champ technique pour stocker les IDs des formateurs habilités par la formation
-    # Il servira de base pour le filtre (domaine)
-    instructor_eligible_ids = fields.Many2many(
-        'res.partner', 
-        compute='_compute_instructor_eligible_ids'
-    )
-
-    # 2. Mise à jour du champ Formateur avec le domaine dynamique
-    instructor_id = fields.Many2one(
-        'res.partner', 
-        string="Formateur",
-        # Le domaine filtre : 
-        # - Doit être un formateur
-        # - Doit faire partie de la liste des habilités du cours choisi
-        domain="[('is_instructor', '=', True), ('id', 'in', instructor_eligible_ids)]"
-    )
-
-    @api.depends('course_id')
-    def _compute_instructor_eligible_ids(self):
-        """ Calcule la liste des formateurs autorisés pour la formation sélectionnée """
-        for session in self:
-            if session.course_id:
-                # On récupère les formateurs habilités définis dans le cours
-                session.instructor_eligible_ids = session.course_id.instructor_ids
-            else:
-                # Si aucun cours n'est choisi, la liste est vide
-                session.instructor_eligible_ids = self.env['res.partner'].browse()
-
-
-    
-    duration_total = fields.Float(string="Durée Totale (Heures)", compute='_compute_duration_total', store=True)
+    seats = fields.Integer("Nombre de places", store=True)
     attendance_threshold = fields.Float(string="Seuil de présence (%)", default=80.0)
-   
-
-  
-    # Relations Many2one
-    course_id = fields.Many2one('formation.course', string="Formation", required=True)
     
- 
-
-    # Relations One2many
-    registration_ids = fields.One2many('formation.registration', 'session_id', string="Inscriptions")
-    seance_ids = fields.One2many('formation.seance', 'session_id', string="Séances")
-
-    # On crée un champ Many2many "virtuel" (calculé) pour afficher toutes les salles de la session
-    room_ids = fields.Many2many(
-        'formation.room', 
-        string="Salles utilisées", 
-        compute='_compute_room_ids',
-        
-    )
     state = fields.Selection([
         ('draft', 'Brouillon'),
         ('confirmed', 'Confirmée'),
@@ -78,88 +25,115 @@ class FormationSession(models.Model):
         ('cancelled', 'Annulée'),
     ], string="Statut", default='draft', tracking=True)
 
+    # Relations Many2one
+    course_id = fields.Many2one('formation.course', string="Formation", required=True)
+    instructor_id = fields.Many2one(
+        'res.partner', 
+        string="Formateur",
+        domain="[('is_instructor', '=', True), ('id', 'in', instructor_eligible_ids)]"
+    )
+
+    # Relations One2many
+    registration_ids = fields.One2many('formation.registration', 'session_id', string="Inscriptions")
+    seance_ids = fields.One2many('formation.seance', 'session_id', string="Séances")
+
+    # Champs techniques et calculés
+    instructor_eligible_ids = fields.Many2many(
+        'res.partner', 
+        compute='_compute_instructor_eligible_ids'
+    )
+    duration_total = fields.Float(string="Durée Totale (Heures)", compute='_compute_duration_total', store=True)
+    room_ids = fields.Many2many(
+        'formation.room', 
+        string="Salles utilisées", 
+        compute='_compute_room_ids'
+    )
+
+    # =========================================================================
+    # 2. MÉTHODES CALCULÉES (@api.depends)
+    # =========================================================================
+    @api.depends('course_id')
+    def _compute_instructor_eligible_ids(self):
+        for session in self:
+            if session.course_id:
+                session.instructor_eligible_ids = session.course_id.instructor_ids
+            else:
+                session.instructor_eligible_ids = self.env['res.partner'].browse()
 
     @api.depends('seance_ids.start_hour', 'seance_ids.end_hour')
     def _compute_duration_total(self):
         for session in self:
             session.duration_total = sum(s.end_hour - s.start_hour for s in session.seance_ids)
 
-
-    def action_notify_missing_evaluations(self):
-        """
-        Envoie une notification si des évaluations manquent à la fin de la session
-        uniquement pour les participants dont le statut est 'Inscrit'.
-        """
-        for session in self:
-            # On filtre les inscriptions selon deux critères :
-            # 1. L'évaluation est à 0 ou vide (not r.evaluation)
-            # 2. Le statut de l'étudiant est exactement 'registered'
-            students_without_eval = session.registration_ids.filtered(
-                lambda r: (r.evaluation == 0.0 or not r.evaluation) and r.status == 'registered'
-            )
-
-            if students_without_eval:
-                self._create_admin_activity(
-                    f"Alerte : Évaluations manquantes pour {len(students_without_eval)} "
-                    f"participants inscrits dans la session {session.name}"
-                )
-
-    @api.constrains('state')
-    def _check_requirements_on_state_change(self):
-        """ 
-        Vérifie les règles métier lors de l'activation d'une session (Confirmée ou En cours).
-        """
-        for session in self:
-            if session.state in ['confirmed', 'in_progress']:
-                # 1. Règle : Dates de début et de fin obligatoires
-                if not session.date_start or not session.date_end:
-                    raise ValidationError("Impossible de confirmer : Les dates de début et de fin doivent être renseignées.")
-                
-                # 2. Règle : Durée formation == Somme durée séances
-                # On calcule la somme des durées (fin - début) de chaque séance
-                total_seances_duration = sum((seance.end_hour - seance.start_hour) for seance in session.seance_ids if seance.start_hour and seance.end_hour)
-                course_duration = session.course_id.duration
-                
-                if total_seances_duration > course_duration:
-                    raise ValidationError(
-                        f"Incohérence de durée : La formation '{session.course_id.name}' dure {course_duration}h, "
-                        f"mais le total actuel de vos séances est superieure à la date pemise c'est à dire  {total_seances_duration}h. "
-                        f"Veuillez ajuster les séances avant de confirmer."
-                    )
-
-
-                """ 
-                    Si on active une session (Confirmée/En cours), on vérifie que ses séances 
-                    ne créent pas de conflits avec d'autres sessions déjà actives.
-                    """
-                # 3. Vérification des conflits de salle
-                for seance in session.seance_ids:
-                        # On appelle la logique de vérification de la séance
-                        # Si un conflit existe, le ValidationError remontera ici
-                        seance._check_room_availability_and_state()
-
-        
-           
-
-
     @api.depends('seance_ids.room_id')
     def _compute_room_ids(self):
         for session in self:
-            # La méthode .mapped() est ultra-optimisée dans Odoo. 
-            # Elle parcourt toutes les séances de la session et extrait les salles uniques.
             session.room_ids = session.seance_ids.mapped('room_id')
-            
-   
 
-  
-
-    # 2. Contrainte de cohérence des dates
+    # =========================================================================
+    # 3. CONTRAINTES DE VALIDATION (@api.constrains)
+    # =========================================================================
     @api.constrains('date_start', 'date_end')
     def _check_dates(self):
         for record in self:
             if record.date_start and record.date_end and record.date_end < record.date_start:
                 raise ValidationError("La date de fin ne peut pas être antérieure à la date de début !")
-        
+
+    @api.constrains('seats', 'registration_ids')
+    def _check_seats_limit(self):
+        for record in self:
+            if record.seats > 0 and len(record.registration_ids) > record.seats:
+                raise ValidationError(
+                    f"Surréservation ! Le nombre de participants actuels ({len(record.registration_ids)}) "
+                    f"dépasse le nombre de places maximum autorisé ({record.seats}) pour cette session."
+                )
+
+    @api.constrains('state')
+    def _check_requirements_on_state_change(self):
+        for session in self:
+            if session.state in ['confirmed', 'in_progress']:
+                if not session.date_start or not session.date_end:
+                    raise ValidationError("Impossible de confirmer : Les dates de début et de fin doivent être renseignées.")
+                for seance in session.seance_ids:
+                    seance._check_seance_constraints()
+
+    # =========================================================================
+    # 4. MÉTHODES MÉTIER & CERVEAU DES STATUTS
+    # =========================================================================
+    def _apply_state_logic(self):
+        today = fields.Date.today()
+        for record in self:
+            if not record.date_start:
+                continue
+
+            if record.state == 'draft':
+                if record.date_start == today + timedelta(days=1):
+                    record.notify_admin("Alerte J-1 : Session toujours en Brouillon.")
+                elif record.date_start <= today:
+                    record.notify_admin("URGENT : Date de début atteinte (Session en Brouillon).")
+
+            new_state = False
+            if record.state == 'confirmed' and record.date_start <= today:
+                new_state = 'in_progress'
+            elif record.state == 'in_progress' and record.date_end and record.date_end < today:
+                new_state = 'done'
+            elif record.state == 'in_progress' and record.date_start > today:
+                new_state = 'confirmed'
+
+            if new_state:
+                record.state = new_state
+                return new_state
+
+    def action_notify_missing_evaluations(self):
+        for session in self:
+            students_without_eval = session.registration_ids.filtered(
+                lambda r: (r.evaluation == 0.0 or not r.evaluation) and r.status == 'registered'
+            )
+            if students_without_eval:
+                session.notify_admin(
+                    f"Alerte : Évaluations manquantes pour {len(students_without_eval)} "
+                    f"participants inscrits dans la session {session.name}"
+                )
 
     def action_confirm(self):
         self.write({'state': 'confirmed'})
@@ -172,7 +146,6 @@ class FormationSession(models.Model):
 
     def action_draft(self):
         self.write({'state': 'draft'})
-    
 
     def action_in_progress(self):
         for record in self:
@@ -182,62 +155,20 @@ class FormationSession(models.Model):
         for record in self:
             record.write({'state': 'done'})
 
-
-
-# --- MÉTHODE CERVEAU (Centralise toute la logique) ---
-    def _apply_state_logic(self):
-        """ Détermine l'état et lance les alertes en fonction des dates """
-        today = fields.Date.today()
-        for record in self:
-            if not record.date_start:
-                continue
-
-            # A. LOGIQUE DES ALERTES (Uniquement si en brouillon)
-            if record.state == 'draft':
-                if record.date_start == today + timedelta(days=1):
-                    record._create_admin_activity("Alerte J-1 : Session toujours en Brouillon.")
-                elif record.date_start <= today:
-                    record._create_admin_activity("URGENT : Date de début atteinte (Session en Brouillon).")
-
-            # B. LOGIQUE DE CHANGEMENT D'ÉTAT (Automatique)
-            new_state = False
-            # Cas 1 : Passage à "En cours"
-            if record.state == 'confirmed' and record.date_start <= today:
-                new_state = 'in_progress'
-            
-            # Cas 2 : Passage à "Terminé"
-            elif record.state == 'in_progress' and record.date_end and record.date_end < today:
-                new_state = 'done'
-
-            # Cas 3 : Retour arrière (Si on modifie les dates manuellement)
-
-            elif record.state == 'in_progress' and record.date_start > today:
-                new_state = 'confirmed'
-
-            if new_state:
-                record.state = new_state
-                # On retourne l'info pour le Toast si c'est un appel manuel
-                return new_state 
-
-    # --- POINTS D'ENTRÉE (Appellent le cerveau) ---
-
+    # =========================================================================
+    # 5. SURCHARGE DES MÉTHODES ORM (CRUD & CRON)
+    # =========================================================================
     def write(self, vals):
         res = super(FormationSession, self).write(vals)
-        
         if 'date_start' in vals or 'date_end' in vals or 'state' in vals:
             for record in self:
-                # On capture l'état avant et après
-                old_state = record.state
                 changed_state = record._apply_state_logic()
-                
-                # On prépare un message de succès
                 message = "Dates mises à jour."
                 if changed_state:
                     message = f"Statut mis à jour : {record.state}"
                 elif record.state == 'draft':
                     message = "Vérification des alertes effectuée (J-1)."
 
-                # On force le retour de la notification pour TESTER
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -252,39 +183,5 @@ class FormationSession(models.Model):
 
     @api.model
     def _scheduler_check_sessions(self):
-        """ Déclencheur automatique de nuit (CRON) """
-        sessions = self.search([('state', 'not in', ['done', 'cancelled'])])
+        sessions = self.search([('state', 'not in', [ 'cancelled'])])
         sessions._apply_state_logic()
-
-    def _create_admin_activity(self, note):
-        # On prend l'utilisateur actuel 
-        target_user = self.env.user 
-        
-        # 1. Poster dans le log (le plus fiable pour tester)
-        self.message_post(
-            body=f"<b>LOG ALERTE :</b> {note}",
-            message_type='notification',
-            subtype_xmlid='mail.mt_note'
-        )
-        
-        # 2. Créer l'activité
-        self.activity_schedule(
-            'mail.mail_activity_data_todo',
-            note=note,
-            user_id=target_user.id,
-            summary="Alerte Session"
-        )
-
-    @api.constrains('seats', 'registration_ids')
-    def _check_seats_limit(self):
-        """
-        Règle : Le nombre de participants inscrits ne doit pas dépasser la limite de places.
-        """
-        for record in self:
-            # On vérifie uniquement si une limite de place a été définie (> 0)
-            if record.seats > 0 and len(record.registration_ids) > record.seats:
-                raise ValidationError(
-                    f"Surréservation ! Le nombre de participants actuels ({len(record.registration_ids)}) "
-                    f"dépasse le nombre de places maximum autorisé ({record.seats}) pour cette session."
-                )
-

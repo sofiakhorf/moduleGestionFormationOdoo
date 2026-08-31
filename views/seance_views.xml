@@ -30,7 +30,7 @@
                         <group>
                             <field name="unavailable_room_ids" invisible="1"/>
                             <field name="room_id" 
-                                domain="[('id', 'not in', unavailable_room_ids)]"
+                                domain="[('id', 'not in', unavailable_room_ids), ('admin_state', '=', 'active')]"
                                 options="{'no_create': True, 'no_open': True}"/>
                             
                             
